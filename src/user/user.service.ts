@@ -10,6 +10,7 @@ import { FastifyRequest } from 'fastify';
 import { ICreateUserPayload, IUpdateUserPayload } from '@dto/user/user.dto';
 import { UserEntity } from '@entities/user.entity';
 import * as bcrypt from 'bcrypt';
+import { IAdvanceFilter, IResponseAdvanceFilter } from '@dto/base.dto';
 
 @Injectable()
 export class UserService extends BaseRepository {
@@ -30,11 +31,12 @@ export class UserService extends BaseRepository {
     }
 
     //Create new user
+    const salt = await bcrypt.genSalt(10);
     const userRepo = this.getRepository(UserEntity);
     const createUser = userRepo.create({
       app_id: this.AppId,
       username: payload.username,
-      password: await bcrypt.hash(payload.password, 10),
+      password: await bcrypt.hash(payload.password, salt),
       provider: 'credentials',
       last_active: new Date(),
       first_login: true,
@@ -54,6 +56,11 @@ export class UserService extends BaseRepository {
       })
       .getOneOrFail();
 
+    if (payload.password) {
+      const salt = await bcrypt.genSalt(10);
+      payload.password = await bcrypt.hash(payload.password, salt);
+    }
+
     const update = await userRepo.update(payload.id, {
       ...payload,
     });
@@ -65,5 +72,51 @@ export class UserService extends BaseRepository {
     }
 
     return user;
+  }
+
+  async GetAllUser(): Promise<UserEntity[]> {
+    return await this.getRepository(UserEntity).find({
+      where: {
+        app_id: this.AppId,
+      },
+      relations: {
+        profiles: true,
+        address: true,
+      },
+    });
+  }
+
+  async GetUserById(Id: number): Promise<UserEntity[]> {
+    return await this.getRepository(UserEntity).find({
+      where: {
+        app_id: this.AppId,
+        id: Id,
+      },
+      relations: {
+        profiles: true,
+        address: true,
+      },
+    });
+  }
+
+  async DeleteUserById(id: number): Promise<number> {
+    await this.getRepository(UserEntity).softDelete(id);
+    return id;
+  }
+
+  async AdvanceFilterUser(
+    query: IAdvanceFilter,
+  ): Promise<IResponseAdvanceFilter<UserEntity>> {
+    const user = await this.AdvanceFilter(query, UserEntity, {
+      app_id: true,
+      table_alias: 'user',
+      preload: ['profiles', 'address'],
+    });
+
+    return {
+      total_page: Math.ceil(user.total / query.per_page),
+      total: user.total,
+      data: user.data,
+    };
   }
 }

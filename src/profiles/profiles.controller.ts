@@ -8,24 +8,28 @@ import {
   Query,
   Res,
 } from '@nestjs/common';
-import { ApiProperty, ApiTags } from '@nestjs/swagger';
-import ApiResponse from '@lib/http-response';
+import { ProfilesService } from './profiles.service';
 import { FastifyReply } from 'fastify';
-import { UserService } from './user.service';
-import { ICreateUserPayload, IUpdateUserPayload } from '@dto/user/user.dto';
+import ApiResponse from '@lib/http-response';
+import { ApiProperty, ApiTags } from '@nestjs/swagger';
 import { IAdvanceFilter } from '@dto/base.dto';
+import {
+  ICreateNewProfile,
+  IUpdateProfilePayload,
+} from '@dto/profile/profile.dto';
 
-@Controller('user')
-@ApiTags('User')
-export class UserController {
-  constructor(private readonly userService: UserService) {}
+@Controller('profiles')
+@ApiTags('Profile')
+export class ProfilesController {
+  constructor(private readonly profileService: ProfilesService) {}
+
   @Post()
-  async CreateNewUser(
+  async CreateNewProfile(
     @Res() res: FastifyReply,
-    @Body() payload: ICreateUserPayload,
+    @Body() payload: ICreateNewProfile,
   ) {
     try {
-      const result = await this.userService.CreateNewUserService(payload);
+      const result = await this.profileService.CreateNewProfile(payload);
       return new ApiResponse(res).handle(result);
     } catch (err) {
       return new ApiResponse(res).error(err);
@@ -35,10 +39,10 @@ export class UserController {
   @Put()
   async UpdateUser(
     @Res() res: FastifyReply,
-    @Body() payload: IUpdateUserPayload,
+    @Body() payload: IUpdateProfilePayload,
   ) {
     try {
-      const result = await this.userService.UpdateUserById(payload);
+      const result = await this.profileService.UpdateProfile(payload);
       return new ApiResponse(res).handle(result);
     } catch (err) {
       return new ApiResponse(res).error(err);
@@ -46,9 +50,9 @@ export class UserController {
   }
 
   @Get()
-  async GetAllUser(@Res() res: FastifyReply) {
+  async GetAllProfile(@Res() res: FastifyReply) {
     try {
-      const result = await this.userService.GetAllUser();
+      const result = await this.profileService.GetAllProfile();
       return new ApiResponse(res).handle(result);
     } catch (err) {
       return new ApiResponse(res).error(err);
@@ -57,9 +61,9 @@ export class UserController {
 
   @Get('/show')
   @ApiProperty({ name: 'id', type: 'number' })
-  async GetUserById(@Res() res: FastifyReply, @Query('id') id: number) {
+  async GetProfileById(@Res() res: FastifyReply, @Query('id') id: number) {
     try {
-      const result = await this.userService.GetUserById(id);
+      const result = await this.profileService.GetProfileById(id);
       return new ApiResponse(res).handle(result);
     } catch (err) {
       return new ApiResponse(res).error(err);
@@ -70,7 +74,7 @@ export class UserController {
   @ApiProperty({ name: 'id', type: 'number' })
   async DeleteUserById(@Res() res: FastifyReply, @Query('id') id: number) {
     try {
-      const result = await this.userService.DeleteUserById(id);
+      const result = await this.profileService.DeleteProfileById(id);
       return new ApiResponse(res).handle(result);
     } catch (err) {
       return new ApiResponse(res).error(err);
@@ -83,7 +87,7 @@ export class UserController {
     @Body() payload: IAdvanceFilter,
   ) {
     try {
-      const result = await this.userService.AdvanceFilterUser(payload);
+      const result = await this.profileService.AdvanceFilterProfile(payload);
       return new ApiResponse(res).handle(result);
     } catch (err) {
       return new ApiResponse(res).error(err);

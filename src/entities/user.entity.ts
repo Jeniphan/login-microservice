@@ -45,9 +45,9 @@ export class UserEntity {
   @DeleteDateColumn({ type: 'timestamp', nullable: true })
   deleted_at: Date | null;
 
-  @OneToMany(() => ProfileEntity, (profile) => profile.user_id)
+  @OneToMany(() => ProfileEntity, (profile) => profile.user)
   profiles: ProfileEntity[];
 
-  @OneToMany(() => AddressEntity, (address) => address.user_id)
+  @OneToMany(() => AddressEntity, (address) => address.user)
   address: AddressEntity[];
 }
