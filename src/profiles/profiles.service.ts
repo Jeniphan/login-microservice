@@ -1,4 +1,8 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import {
   ICreateNewProfile,
   IUpdateProfilePayload,
@@ -6,9 +10,15 @@ import {
 import { BaseRepository } from '../common/base_service.service';
 import { ProfileEntity } from '@entities/profile.entity';
 import { IAdvanceFilter, IResponseAdvanceFilter } from '@dto/base.dto';
+import { DataSource } from 'typeorm';
+import { REQUEST } from '@nestjs/core';
+import { FastifyRequest } from 'fastify';
 
 @Injectable()
 export class ProfilesService extends BaseRepository {
+  constructor(dataSource: DataSource, @Inject(REQUEST) req: FastifyRequest) {
+    super(dataSource, req);
+  }
   async CreateNewProfile(payload: ICreateNewProfile): Promise<ProfileEntity> {
     const profileRepo = this.getRepository(ProfileEntity);
 
@@ -44,26 +54,34 @@ export class ProfilesService extends BaseRepository {
   }
 
   async GetAllProfile(): Promise<ProfileEntity[]> {
-    return await this.CustomQueryWithAppId(ProfileEntity, {
-      table_alias: 'profiles',
-      preload: ['user'],
-    }).getMany();
+    return await this.getRepository(ProfileEntity).find({
+      where: {
+        user: {
+          app_id: this.AppId,
+        },
+      },
+      relations: {
+        user: true,
+      },
+    });
   }
 
   async GetProfileById(id: number): Promise<ProfileEntity> {
-    return await this.CustomQueryWithAppId(ProfileEntity, {
-      table_alias: 'profiles',
-      preload: ['user'],
-    })
-      .where('profiles.id = :id', { id: id })
-      .getOneOrFail();
+    return await this.getRepository(ProfileEntity).findOneOrFail({
+      where: {
+        user: {
+          app_id: this.AppId,
+        },
+        id: id,
+      },
+      relations: {
+        user: true,
+      },
+    });
   }
 
   async DeleteProfileById(id: number): Promise<number> {
-    const deleted = await this.CustomQueryWithAppId(ProfileEntity)
-      .softDelete()
-      .where('id = :id', { id: id })
-      .execute();
+    const deleted = await this.getRepository(ProfileEntity).softDelete(id);
     if (!deleted || deleted.affected === 0) {
       throw new InternalServerErrorException({
         message: 'Delete profile have error',

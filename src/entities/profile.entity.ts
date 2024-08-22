@@ -25,13 +25,16 @@ export class ProfileEntity {
   first_name: string;
 
   @Column({ type: 'varchar', length: 255 })
-  lest_name: string;
+  last_name: string;
 
   @Column({ type: 'varchar', length: 255 })
   email: string;
 
   @Column({ type: 'varchar', length: 255 })
   phone_number: string;
+
+  @Column({ type: 'varchar', length: 255 })
+  image: string;
 
   @CreateDateColumn({
     type: 'timestamp',

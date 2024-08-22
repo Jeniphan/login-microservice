@@ -7,6 +7,7 @@ import {
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { HttpExceptionFilter } from './helper/http-exception.filter';
+import { ApplicationGuard } from './application/application.guard';
 
 async function bootstrap() {
   const port = process.env.PORT;
@@ -30,6 +31,8 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
 
   app.useGlobalFilters(new HttpExceptionFilter());
+
+  app.useGlobalGuards(new ApplicationGuard());
 
   const config = new DocumentBuilder()
     .setTitle('This Template Microservice')

@@ -45,6 +45,9 @@ export class AddressEntity {
   @Column({ type: 'varchar', length: 255 })
   zip_code: string;
 
+  @Column({ type: 'boolean', default: false })
+  is_default: boolean;
+
   @CreateDateColumn({
     type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP',

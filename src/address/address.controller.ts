@@ -6,27 +6,30 @@ import {
   Post,
   Put,
   Query,
-  Req,
   Res,
 } from '@nestjs/common';
-import { ApiProperty, ApiTags } from '@nestjs/swagger';
+import { FastifyReply } from 'fastify';
 import ApiResponse from '@lib/http-response';
-import { FastifyReply, FastifyRequest } from 'fastify';
-import { UserService } from './user.service';
-import { ICreateUserPayload, IUpdateUserPayload } from '@dto/user/user.dto';
+import { ApiProperty, ApiTags } from '@nestjs/swagger';
 import { IAdvanceFilter } from '@dto/base.dto';
+import { AddressService } from './address.service';
+import {
+  ICreateNewAddress,
+  IUpdateAddressPayload,
+} from '@dto/address/address.dto';
 
-@Controller('user')
-@ApiTags('User')
-export class UserController {
-  constructor(private readonly userService: UserService) {}
+@Controller('address')
+@ApiTags('Address')
+export class AddressController {
+  constructor(private readonly addressService: AddressService) {}
+
   @Post()
-  async CreateNewUser(
+  async CreateNewAddress(
     @Res() res: FastifyReply,
-    @Body() payload: ICreateUserPayload,
+    @Body() payload: ICreateNewAddress,
   ) {
     try {
-      const result = await this.userService.CreateNewUserService(payload);
+      const result = await this.addressService.CreateNewAddress(payload);
       return new ApiResponse(res).handle(result);
     } catch (err) {
       return new ApiResponse(res).error(err);
@@ -34,12 +37,12 @@ export class UserController {
   }
 
   @Put()
-  async UpdateUser(
+  async UpdateAddress(
     @Res() res: FastifyReply,
-    @Body() payload: IUpdateUserPayload,
+    @Body() payload: IUpdateAddressPayload,
   ) {
     try {
-      const result = await this.userService.UpdateUserById(payload);
+      const result = await this.addressService.UpdateAddress(payload);
       return new ApiResponse(res).handle(result);
     } catch (err) {
       return new ApiResponse(res).error(err);
@@ -47,9 +50,9 @@ export class UserController {
   }
 
   @Get()
-  async GetAllUser(@Res() res: FastifyReply, @Req() req: FastifyRequest) {
+  async GetAllAddress(@Res() res: FastifyReply) {
     try {
-      const result = await this.userService.GetAllUser();
+      const result = await this.addressService.GetAllAddress();
       return new ApiResponse(res).handle(result);
     } catch (err) {
       return new ApiResponse(res).error(err);
@@ -58,9 +61,9 @@ export class UserController {
 
   @Get('/show')
   @ApiProperty({ name: 'id', type: 'number' })
-  async GetUserById(@Res() res: FastifyReply, @Query('id') id: number) {
+  async GetAddressById(@Res() res: FastifyReply, @Query('id') id: number) {
     try {
-      const result = await this.userService.GetUserById(id);
+      const result = await this.addressService.GetAddressById(id);
       return new ApiResponse(res).handle(result);
     } catch (err) {
       return new ApiResponse(res).error(err);
@@ -69,9 +72,9 @@ export class UserController {
 
   @Delete()
   @ApiProperty({ name: 'id', type: 'number' })
-  async DeleteUserById(@Res() res: FastifyReply, @Query('id') id: number) {
+  async DeleteAddressById(@Res() res: FastifyReply, @Query('id') id: number) {
     try {
-      const result = await this.userService.DeleteUserById(id);
+      const result = await this.addressService.DeletedAddressById(id);
       return new ApiResponse(res).handle(result);
     } catch (err) {
       return new ApiResponse(res).error(err);
@@ -84,7 +87,7 @@ export class UserController {
     @Body() payload: IAdvanceFilter,
   ) {
     try {
-      const result = await this.userService.AdvanceFilterUser(payload);
+      const result = await this.addressService.AdvanceFilterAddress(payload);
       return new ApiResponse(res).handle(result);
     } catch (err) {
       return new ApiResponse(res).error(err);

@@ -5,6 +5,9 @@ import { ConfigModule } from '@nestjs/config';
 import { UserModule } from './user/user.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ProfilesModule } from './profiles/profiles.module';
+import { AddressModule } from './address/address.module';
+import { AuthModule } from './auth/auth.module';
+import { HttpClientService } from '@lib/http_client.service';
 
 @Module({
   imports: [
@@ -23,8 +26,10 @@ import { ProfilesModule } from './profiles/profiles.module';
     }),
     UserModule,
     ProfilesModule,
+    AddressModule,
+    AuthModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, HttpClientService],
 })
 export class AppModule {}

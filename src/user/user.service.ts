@@ -2,20 +2,24 @@ import {
   Inject,
   Injectable,
   InternalServerErrorException,
+  Scope,
 } from '@nestjs/common';
 import { BaseRepository } from '../common/base_service.service';
 import { DataSource } from 'typeorm';
-import { REQUEST } from '@nestjs/core';
-import { FastifyRequest } from 'fastify';
 import { ICreateUserPayload, IUpdateUserPayload } from '@dto/user/user.dto';
 import { UserEntity } from '@entities/user.entity';
 import * as bcrypt from 'bcrypt';
 import { IAdvanceFilter, IResponseAdvanceFilter } from '@dto/base.dto';
+import { REQUEST } from '@nestjs/core';
+import { FastifyRequest } from 'fastify';
 
-@Injectable()
+@Injectable({ scope: Scope.REQUEST })
 export class UserService extends BaseRepository {
-  constructor(dataSource: DataSource, @Inject(REQUEST) req: FastifyRequest) {
-    super(dataSource, req);
+  constructor(
+    dataSource: DataSource,
+    @Inject(REQUEST) request: FastifyRequest,
+  ) {
+    super(dataSource, request);
   }
 
   async CreateNewUserService(payload: ICreateUserPayload): Promise<UserEntity> {
