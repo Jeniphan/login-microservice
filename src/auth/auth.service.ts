@@ -17,6 +17,8 @@ import { UserEntity } from '@entities/user.entity';
 import * as bcrypt from 'bcrypt';
 import { UUIDV4 } from '../helper/uuid.helper';
 import { JwtService } from '@nestjs/jwt';
+import { ProfileEntity } from '@entities/profile.entity';
+import * as process from 'node:process';
 
 @Injectable()
 export class AuthService extends BaseRepository {
@@ -35,31 +37,50 @@ export class AuthService extends BaseRepository {
       preload: ['profiles'],
     })
       .where('users.username = :username', { username: payload.username })
-      .where('users.provider = :p', { p: payload.provider })
+      .andWhere('users.provider = :p', { p: payload.provider })
       .getOne();
 
     if (!userInfo) {
       //Create user
-      const create = userRepo.create({
-        username: payload.username,
-        provider: payload.provider,
-        password: await bcrypt.hash(UUIDV4(), await bcrypt.genSalt()),
-        last_active: new Date(),
-        first_login: true,
-        deleted_at: null,
-        app_id: this.AppId,
-        profiles: [
-          {
-            first_name: payload.first_name,
-            last_name: payload.last_name,
-            email: payload.email,
-            image: payload.image,
-          },
-        ],
-      });
-      await userRepo.save(create);
+      const user = new UserEntity();
+      user.username = payload.username;
+      user.provider = payload.provider;
+      user.password = await bcrypt.hash(UUIDV4(), await bcrypt.genSalt());
+      user.last_active = new Date();
+      user.first_login = true;
+      user.deleted_at = null;
+      user.app_id = this.AppId;
 
-      userInfo = create;
+      await userRepo.save(user);
+
+      if (
+        payload.first_name ||
+        payload.image ||
+        payload.last_name ||
+        payload.email
+      ) {
+        const profileRepo = this.getRepository(ProfileEntity);
+        const newProfile = profileRepo.create({
+          first_name: payload.first_name ?? null,
+          last_name: payload.last_name ?? null,
+          email: payload.email ?? null,
+          image: payload.image ?? null,
+          deleted_at: null,
+          national_id: null,
+          phone_number: null,
+          user: user,
+        });
+
+        await profileRepo.save(newProfile);
+      }
+
+      userInfo = await this.CustomQueryWithAppId(UserEntity, {
+        table_alias: 'users',
+        preload: ['profiles'],
+      })
+        .where('users.username = :username', { username: payload.username })
+        .andWhere('users.provider = :p', { p: payload.provider })
+        .getOne();
     } else {
       //Update last active
       const update = await userRepo.update(
@@ -71,6 +92,34 @@ export class AuthService extends BaseRepository {
           first_login: false,
         },
       );
+      if (
+        payload.first_name ||
+        payload.image ||
+        payload.last_name ||
+        payload.email
+      ) {
+        const profileRepo = this.getRepository(ProfileEntity);
+
+        await profileRepo.upsert(
+          {
+            id: userInfo.profiles[0].id,
+            user_id: userInfo.id,
+            first_name: payload.first_name,
+            last_name: payload.last_name,
+            email: payload.email,
+            image: payload.image,
+          },
+          {
+            conflictPaths: {
+              first_name: true,
+              last_name: true,
+              email: true,
+              image: true,
+            },
+            skipUpdateIfNoValuesChanged: true,
+          },
+        );
+      }
 
       if (!update || update.affected === 0) {
         throw new InternalServerErrorException({
@@ -83,7 +132,7 @@ export class AuthService extends BaseRepository {
         preload: ['profiles'],
       })
         .where('users.username = :username', { username: payload.username })
-        .where('users.provider = :p', { p: payload.provider })
+        .andWhere('users.provider = :p', { p: payload.provider })
         .getOne();
     }
 
@@ -134,7 +183,6 @@ export class AuthService extends BaseRepository {
   }
 
   private async genToken(userInfo: UserEntity): Promise<string> {
-    console.log(userInfo);
     const payload = {
       id: userInfo.id,
       username: userInfo.username,
@@ -149,7 +197,7 @@ export class AuthService extends BaseRepository {
 
     return await this.jwtService.signAsync(payload, {
       secret: process.env.SECRET_KEY,
-      expiresIn: '1d',
+      expiresIn: process.env.TOKEN_EXPIRE ?? '1d',
     });
   }
 
@@ -160,7 +208,7 @@ export class AuthService extends BaseRepository {
 
     return await this.jwtService.signAsync(payload, {
       secret: process.env.SECRET_KEY_REFRESH,
-      expiresIn: '2d',
+      expiresIn: process.env.TOKEN_REFRESH_EXPIRE ?? '2d',
     });
   }
 }

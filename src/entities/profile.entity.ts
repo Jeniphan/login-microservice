@@ -18,23 +18,23 @@ export class ProfileEntity {
   @Column({ type: 'bigint' })
   user_id: number;
 
-  @Column({ type: 'varchar', length: 255 })
-  national_id: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  national_id: string | null;
 
-  @Column({ type: 'varchar', length: 255 })
-  first_name: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  first_name: string | null;
 
-  @Column({ type: 'varchar', length: 255 })
-  last_name: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  last_name: string | null;
 
-  @Column({ type: 'varchar', length: 255 })
-  email: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  email: string | null;
 
-  @Column({ type: 'varchar', length: 255 })
-  phone_number: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  phone_number: string | null;
 
-  @Column({ type: 'varchar', length: 255 })
-  image: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  image: string | null;
 
   @CreateDateColumn({
     type: 'timestamp',

@@ -35,9 +35,9 @@ async function bootstrap() {
   app.useGlobalGuards(new ApplicationGuard());
 
   const config = new DocumentBuilder()
-    .setTitle('This Template Microservice')
+    .setTitle('Login Microservice')
     .setDescription(
-      'This Template Microservice use TypeORM, Fastify, Swagger, JWT',
+      'This Login Microservice use TypeORM, Fastify, Swagger, JWT',
     )
     .setVersion('1.0')
     .addBearerAuth()
