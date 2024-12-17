@@ -64,6 +64,19 @@ export class BaseRepository {
     );
   }
 
+  protected CustomQueryParentWithAppId<T>(
+    repository: new () => T,
+    option?: IOptionCustomQuery,
+  ) {
+    // const tableDotAppId = option?.table_alias
+    return this.CustomQuery(repository, option).innerJoinAndSelect(
+      `${option.table_alias}.${option.parent_table}`,
+      `${option.parent_table}`,
+      `${option.parent_table}.app_id = :app_id`,
+      { app_id: this.AppId },
+    );
+  }
+
   protected async AdvanceFilter<T>(
     query: IAdvanceFilter,
     repository: new () => T,
@@ -72,10 +85,26 @@ export class BaseRepository {
     data: T[];
     total: number;
   }> {
-    let q = this.CustomQuery<T>(repository, option);
+    let q = this.CustomQuery<T>(repository, { ...option, table_alias: 't1' });
 
     if (option && option.app_id) {
-      q = this.CustomQueryWithAppId(repository, option);
+      q = this.CustomQueryWithAppId(repository, {
+        ...option,
+        table_alias: 't1',
+      });
+    } else if (option && option.with_parent_app_id && option.parent_table) {
+      q = this.CustomQueryParentWithAppId(repository, {
+        ...option,
+        table_alias: 't1',
+      });
+    }
+
+    //Join Table Nested
+    if (option.nested_table) {
+      q = q.leftJoinAndSelect(
+        `${option.table_alias}.${option.nested_table}s`,
+        option.nested_table,
+      );
     }
 
     let total = 0;
@@ -91,14 +120,45 @@ export class BaseRepository {
         q = q.andWhere(
           new Brackets((qb) => {
             query.filter_by.map((filter_by, index) => {
+              qb = qb.where(`t1.${filter_by} in (:...filter)`, {
+                filter: query.filter[index],
+              });
+            });
+          }),
+        );
+      } else {
+        // Condition 'or'
+        q = q.andWhere(
+          new Brackets((qb) => {
+            query.filter_by.map((filter_by, index) => {
+              qb = qb.orWhere(`t1.${filter_by} in (:...filter)`, {
+                filter: query.filter[index],
+              });
+            });
+          }),
+        );
+      }
+    }
+
+    //filter nested
+    if (
+      query.filter_nested_by &&
+      query.filter_nested_by.length > 0 &&
+      query.filter_nested &&
+      query.filter_nested.length > 0
+    ) {
+      if (query.filter_nested_condition === 'and') {
+        q = q.andWhere(
+          new Brackets((qb) => {
+            query.filter_nested_by.map((filter_nested_by, index) => {
               qb = qb.where(
                 `${
-                  option?.table_alias
-                    ? `${option.table_alias}.${filter_by}`
-                    : filter_by
-                } in (:...filter)`,
+                  option?.nested_table
+                    ? `${option.nested_table}.${filter_nested_by}`
+                    : filter_nested_by
+                } IN (:...filter)`,
                 {
-                  filter: query.filter[index],
+                  filter: query.filter_nested[index],
                 },
               );
             });
@@ -108,15 +168,15 @@ export class BaseRepository {
         // Condition 'or'
         q = q.andWhere(
           new Brackets((qb) => {
-            query.filter_by.map((filter_by, index) => {
+            query.filter_nested_by.map((filter_nested_by, index) => {
               qb = qb.orWhere(
                 `${
-                  option?.table_alias
-                    ? `${option.table_alias}.${filter_by}`
-                    : filter_by
+                  option?.nested_table
+                    ? `${option.nested_table}.${filter_nested_by}`
+                    : filter_nested_by
                 } in (:...filter)`,
                 {
-                  filter: query.filter[index],
+                  filter: query.filter_nested[index],
                 },
               );
             });
@@ -135,16 +195,9 @@ export class BaseRepository {
       q = q.andWhere(
         new Brackets((qb) => {
           query.search_by.map((search_by) => {
-            qb = qb.orWhere(
-              `${
-                option?.table_alias
-                  ? `${option.table_alias}.${search_by}`
-                  : search_by
-              } like :search`,
-              {
-                search: `%${query.search}%`,
-              },
-            );
+            qb = qb.orWhere(`t1.${search_by} like :search`, {
+              search: `%${query.search}%`,
+            });
           });
         }),
       );
@@ -156,16 +209,9 @@ export class BaseRepository {
       query.filter_date_start_by !== '' &&
       query.start_date
     ) {
-      q = q.andWhere(
-        `${
-          option?.table_alias
-            ? `${option.table_alias}.${query.filter_date_start_by}`
-            : query.filter_date_start_by
-        } >= :start_date`,
-        {
-          start_date: query.start_date,
-        },
-      );
+      q = q.andWhere(`t1.${query.filter_date_start_by} >= :start_date`, {
+        start_date: query.start_date,
+      });
     }
 
     //End
@@ -174,28 +220,43 @@ export class BaseRepository {
       query.filter_date_end_by !== '' &&
       query.end_date
     ) {
-      q = q.where(
-        `${
-          option?.table_alias
-            ? `${option.table_alias}.${query.filter_date_end_by}`
-            : query.filter_date_end_by
-        } <= :end_date`,
-        {
-          end_date: query.end_date,
-        },
-      );
+      q = q.where(`t1.${query.filter_date_end_by} <= :end_date`, {
+        end_date: query.end_date,
+      });
     }
 
     //Sort
     if (query.sort && query.sort_by && query.sort_by !== '') {
-      q = q.orderBy(
-        `${
-          option?.table_alias
-            ? `${option.table_alias}.${query.sort_by}`
-            : query.sort_by
-        }`,
-        query.sort,
-      );
+      q = q.orderBy(`t1.${query.sort_by}`, query.sort);
+    }
+
+    //Group by
+    if (query.group_by && query.group_sort_by && query.group_sort) {
+      if (query.group_sort === 'DESC') {
+        q = q.innerJoinAndSelect(
+          (subQuery) => {
+            return subQuery
+              .from(repository, 'g')
+              .select(`g.${query.group_by}`, query.group_by) // Select app_id for joining condition
+              .addSelect(`MAX(g.${query.group_sort_by})`, 'm') // Get maximum id for each app_id
+              .groupBy(`g.${query.group_by}`); // Group by app_id to ensure uniqueness
+          },
+          't2', // Alias for the subquery
+          `t1.${query.group_by} = t2.${query.group_by} AND t1.${query.group_sort_by} = t2.m`,
+        );
+      } else {
+        q = q.innerJoinAndSelect(
+          (subQuery) => {
+            return subQuery
+              .from(repository, 'g')
+              .select(`g.${query.group_by}`, query.group_by) // Select app_id for joining condition
+              .addSelect(`MIN(g.${query.group_sort_by})`, 'm') // Get maximum id for each app_id
+              .groupBy(`g.${query.group_by}`); // Group by app_id to ensure uniqueness
+          },
+          't2', // Alias for the subquery
+          `t1.${query.group_by} = t2.${query.group_by} AND t1.${query.group_sort_by} = t2.m`,
+        );
+      }
     }
 
     total = (await q.getMany()).length;
