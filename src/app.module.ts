@@ -8,6 +8,8 @@ import { ProfilesModule } from './profiles/profiles.module';
 import { AddressModule } from './address/address.module';
 import { AuthModule } from './auth/auth.module';
 import { HttpClientService } from '@lib/http_client.service';
+import { CacheModule } from './cache/cache.module';
+import CacheService from '@lib/cache';
 
 @Module({
   imports: [
@@ -21,15 +23,16 @@ import { HttpClientService } from '@lib/http_client.service';
         password: process.env.DB_PASSWORD,
         database: process.env.DB_NAME,
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: true,
+        synchronize: false,
       }),
     }),
     UserModule,
     ProfilesModule,
     AddressModule,
     AuthModule,
+    CacheModule,
   ],
   controllers: [AppController],
-  providers: [AppService, HttpClientService],
+  providers: [AppService, HttpClientService, CacheService],
 })
 export class AppModule {}
