@@ -9,7 +9,6 @@ import { AddressModule } from './address/address.module';
 import { AuthModule } from './auth/auth.module';
 import { HttpClientService } from '@lib/http_client.service';
 import { CacheModule } from './cache/cache.module';
-import CacheService from '@lib/cache';
 
 @Module({
   imports: [
@@ -33,6 +32,6 @@ import CacheService from '@lib/cache';
     CacheModule,
   ],
   controllers: [AppController],
-  providers: [AppService, HttpClientService, CacheService],
+  providers: [AppService, HttpClientService],
 })
 export class AppModule {}
