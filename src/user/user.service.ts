@@ -12,12 +12,14 @@ import * as bcrypt from 'bcrypt';
 import { IAdvanceFilter, IResponseAdvanceFilter } from '@dto/base.dto';
 import { REQUEST } from '@nestjs/core';
 import { FastifyRequest } from 'fastify';
+import CacheService from '@lib/cache';
 
 @Injectable({ scope: Scope.REQUEST })
 export class UserService extends BaseRepository {
   constructor(
     dataSource: DataSource,
     @Inject(REQUEST) request: FastifyRequest,
+    private cache: CacheService,
   ) {
     super(dataSource, request);
   }
@@ -75,7 +77,15 @@ export class UserService extends BaseRepository {
       });
     }
 
-    return user;
+    const newUser = await this.CustomQueryWithAppId(UserEntity)
+      .where('id = :id', {
+        id: payload.id,
+      })
+      .getOneOrFail();
+
+    await this.cache.Set('user', this.AppId, payload.id.toString(), newUser);
+
+    return newUser;
   }
 
   async GetAllUser(): Promise<UserEntity[]> {
@@ -90,21 +100,34 @@ export class UserService extends BaseRepository {
     });
   }
 
-  async GetUserById(Id: number): Promise<UserEntity[]> {
-    return await this.getRepository(UserEntity).find({
-      where: {
-        app_id: this.AppId,
-        id: Id,
-      },
-      relations: {
-        profiles: true,
-        address: true,
-      },
-    });
+  async GetUserById(Id: number): Promise<UserEntity> {
+    const userCache = await this.cache.Get<UserEntity>(
+      'user',
+      this.AppId,
+      Id.toString(),
+    );
+    if (!userCache) {
+      const user = await this.CustomQueryWithAppId(UserEntity, {
+        table_alias: 'user',
+        preload: ['profiles', 'address'],
+      })
+        .where('user.id = :id', { id: Id })
+        .getOneOrFail();
+      await this.cache.Set<UserEntity>(
+        'user',
+        this.AppId,
+        user.id.toString(),
+        user,
+      );
+      return user;
+    } else {
+      return userCache;
+    }
   }
 
   async DeleteUserById(id: number): Promise<number> {
     await this.getRepository(UserEntity).softDelete(id);
+    await this.cache.Delete('user', this.AppId, id.toString());
     return id;
   }
 

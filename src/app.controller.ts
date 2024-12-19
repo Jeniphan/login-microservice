@@ -8,9 +8,9 @@ export class AppController {
   constructor(private readonly appService: AppService) {}
 
   @Get('/health-check')
-  healthCheck(@Res() res: FastifyReply) {
+  async healthCheck(@Res() res: FastifyReply) {
     try {
-      const result = this.appService.healthCheckService();
+      const result = await this.appService.healthCheckService();
       return new ApiResponse(res).handle(result);
     } catch (err) {
       return new ApiResponse(res).error(err);

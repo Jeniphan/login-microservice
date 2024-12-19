@@ -7,16 +7,21 @@ import {
   ICreateNewProfile,
   IUpdateProfilePayload,
 } from '@dto/profile/profile.dto';
-import { BaseRepository } from '../common/base_service.service';
+import { BaseRepository } from '@common/base_service.service';
 import { ProfileEntity } from '@entities/profile.entity';
 import { IAdvanceFilter, IResponseAdvanceFilter } from '@dto/base.dto';
 import { DataSource } from 'typeorm';
 import { REQUEST } from '@nestjs/core';
 import { FastifyRequest } from 'fastify';
+import CacheService from '@lib/cache';
 
 @Injectable()
 export class ProfilesService extends BaseRepository {
-  constructor(dataSource: DataSource, @Inject(REQUEST) req: FastifyRequest) {
+  constructor(
+    dataSource: DataSource,
+    @Inject(REQUEST) req: FastifyRequest,
+    private cache: CacheService,
+  ) {
     super(dataSource, req);
   }
   async CreateNewProfile(payload: ICreateNewProfile): Promise<ProfileEntity> {
@@ -67,17 +72,30 @@ export class ProfilesService extends BaseRepository {
   }
 
   async GetProfileById(id: number): Promise<ProfileEntity> {
-    return await this.getRepository(ProfileEntity).findOneOrFail({
-      where: {
-        user: {
-          app_id: this.AppId,
-        },
-        id: id,
-      },
-      relations: {
-        user: true,
-      },
-    });
+    const profile_cache = await this.cache.Get<ProfileEntity>(
+      'profile',
+      this.AppId,
+      id.toString(),
+    );
+    if (!profile_cache) {
+      const profile = await this.CustomQueryParentWithAppId(ProfileEntity, {
+        table_alias: 'profile',
+        parent_table: 'user',
+        preload: ['user'],
+      })
+        .where('id = :id', { id: id })
+        .getOneOrFail();
+
+      await this.cache.Set<ProfileEntity>(
+        'profile',
+        this.AppId,
+        profile.id.toString(),
+        profile,
+      );
+      return profile;
+    } else {
+      return profile_cache;
+    }
   }
 
   async DeleteProfileById(id: number): Promise<number> {
@@ -87,6 +105,8 @@ export class ProfilesService extends BaseRepository {
         message: 'Delete profile have error',
       });
     }
+
+    await this.cache.Delete('profile', this.AppId, id.toString());
     return id;
   }
 

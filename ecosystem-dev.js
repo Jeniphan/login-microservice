@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: 'cat-ms-type-orm-dev',
+      name: 'login-ms-dev',
       script: 'dist/main.js',
       autorestart: true,
       max_restarts: 10,
