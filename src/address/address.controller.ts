@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { FastifyReply } from 'fastify';
 import ApiResponse from '@lib/http-response';
-import { ApiProperty, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiProperty, ApiTags } from '@nestjs/swagger';
 import { IAdvanceFilter } from '@dto/base.dto';
 import { AddressService } from './address.service';
 import {
@@ -20,6 +20,7 @@ import {
 
 @Controller('address')
 @ApiTags('Address')
+@ApiBearerAuth()
 export class AddressController {
   constructor(private readonly addressService: AddressService) {}
 

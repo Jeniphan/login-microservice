@@ -9,7 +9,7 @@ import {
   Req,
   Res,
 } from '@nestjs/common';
-import { ApiProperty, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiProperty, ApiTags } from '@nestjs/swagger';
 import ApiResponse from '@lib/http-response';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { UserService } from './user.service';
@@ -18,6 +18,7 @@ import { IAdvanceFilter } from '@dto/base.dto';
 
 @Controller('user')
 @ApiTags('User')
+@ApiBearerAuth()
 export class UserController {
   constructor(private readonly userService: UserService) {}
   @Post()

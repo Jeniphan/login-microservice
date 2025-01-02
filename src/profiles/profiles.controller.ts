@@ -11,7 +11,7 @@ import {
 import { ProfilesService } from './profiles.service';
 import { FastifyReply } from 'fastify';
 import ApiResponse from '@lib/http-response';
-import { ApiProperty, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiProperty, ApiTags } from '@nestjs/swagger';
 import { IAdvanceFilter } from '@dto/base.dto';
 import {
   ICreateNewProfile,
@@ -20,6 +20,7 @@ import {
 
 @Controller('profiles')
 @ApiTags('Profile')
+@ApiBearerAuth()
 export class ProfilesController {
   constructor(private readonly profileService: ProfilesService) {}
 
