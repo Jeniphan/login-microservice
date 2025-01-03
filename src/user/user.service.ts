@@ -56,7 +56,7 @@ export class UserService extends BaseRepository {
 
   async UpdateUserById(payload: IUpdateUserPayload): Promise<UserEntity> {
     const userRepo = this.getRepository(UserEntity);
-    const user = await this.CustomQueryWithAppId(UserEntity)
+    await this.CustomQueryWithAppId(UserEntity)
       .where('id = :id', {
         id: payload.id,
       })

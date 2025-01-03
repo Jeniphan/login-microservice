@@ -45,6 +45,10 @@ export default class CacheService {
   }
 
   async Delete(table_name: string, app_id: string, key: string) {
-    await this.cacheManager.del(this.generateKey(table_name, app_id, key));
+    const _key = this.generateKey(table_name, app_id, key);
+    const cache = this.cacheManager.get(_key);
+    if (cache) {
+      await this.cacheManager.del(_key);
+    }
   }
 }
