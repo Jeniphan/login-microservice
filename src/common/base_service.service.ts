@@ -58,6 +58,7 @@ export class BaseRepository {
     const tableDotAppId = option?.table_alias
       ? `${option.table_alias}.app_id`
       : 'app_id';
+
     return this.CustomQuery(repository, option).where(
       `${tableDotAppId} = :appId`,
       { appId: (this.request.headers['app_id'] as string) ?? '1' },
