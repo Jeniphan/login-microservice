@@ -27,7 +27,7 @@ export class UserService extends BaseRepository {
   async CreateNewUserService(payload: ICreateUserPayload): Promise<UserEntity> {
     //Check username is existed
     const user = await this.CustomQueryWithAppId(UserEntity)
-      .where('username = :username', { username: payload.username })
+      .andWhere('username = :username', { username: payload.username })
       .getOne();
 
     if (user) {
@@ -89,15 +89,10 @@ export class UserService extends BaseRepository {
   }
 
   async GetAllUser(): Promise<UserEntity[]> {
-    return await this.getRepository(UserEntity).find({
-      where: {
-        app_id: this.AppId,
-      },
-      relations: {
-        profiles: true,
-        address: true,
-      },
-    });
+    return await this.CustomQueryWithAppId(UserEntity, {
+      table_alias: 'user',
+      preload: ['profiles', 'address'],
+    }).getMany();
   }
 
   async GetUserById(Id: number): Promise<UserEntity> {
