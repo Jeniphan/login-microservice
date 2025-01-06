@@ -35,7 +35,7 @@ export class AuthService extends BaseRepository {
       table_alias: 'users',
       preload: ['profiles'],
     })
-      .where('users.username = :username', { username: payload.username })
+      .andWhere('users.username = :username', { username: payload.username })
       .andWhere('users.provider = :p', { p: payload.provider })
       .getOne();
 
@@ -77,7 +77,7 @@ export class AuthService extends BaseRepository {
         table_alias: 'users',
         preload: ['profiles'],
       })
-        .where('users.username = :username', { username: payload.username })
+        .andWhere('users.username = :username', { username: payload.username })
         .andWhere('users.provider = :p', { p: payload.provider })
         .getOne();
     } else {
@@ -130,7 +130,7 @@ export class AuthService extends BaseRepository {
         table_alias: 'users',
         preload: ['profiles'],
       })
-        .where('users.username = :username', { username: payload.username })
+        .andWhere('users.username = :username', { username: payload.username })
         .andWhere('users.provider = :p', { p: payload.provider })
         .getOne();
     }
@@ -147,7 +147,7 @@ export class AuthService extends BaseRepository {
 
   async SignIn(payload: ISingInPayload): Promise<AuthLogin> {
     const userInfo = await this.CustomQueryWithAppId(UserEntity)
-      .where('username = :username', { username: payload.username })
+      .andWhere('username = :username', { username: payload.username })
       .getOneOrFail();
 
     //Check password
