@@ -26,6 +26,7 @@ export class AuthController {
     }
   }
 
+  @ApiBearerAuth()
   @Post('/login')
   @UseInterceptors(TransactionInterceptor)
   async SignIn(@Body() payload: ISingInPayload, @Res() res: FastifyReply) {
