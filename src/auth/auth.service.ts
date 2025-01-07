@@ -146,8 +146,11 @@ export class AuthService extends BaseRepository {
   }
 
   async SignIn(payload: ISingInPayload): Promise<AuthLogin> {
-    const userInfo = await this.CustomQueryWithAppId(UserEntity)
-      .andWhere('username = :username', { username: payload.username })
+    const userInfo = await this.CustomQueryWithAppId(UserEntity, {
+      table_alias: 'user',
+      preload: ['profiles', 'address'],
+    })
+      .andWhere('user.username = :username', { username: payload.username })
       .getOneOrFail();
 
     //Check password
