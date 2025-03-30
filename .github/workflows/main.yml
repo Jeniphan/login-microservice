@@ -25,7 +25,7 @@ jobs:
       - run: npm ci
       # Using npm ci for a clean install based on package-lock.json, which is faster and more reliable for CI/CD.
       - run: npm run build
-      - run: tar -czvf api-bundle.tar.gz dist node_modules package.json package-look.json ecosystem.config.js
+      - run: tar -czvf api-bundle.tar.gz dist node_modules package.json package-lock.json ecosystem.config.js
       # Assuming you're using Next.js, you should bundle `.next` (the result of the build command) instead of `build`.
 
       - name: Push to the dock
