@@ -28,7 +28,7 @@ async function bootstrap() {
       transform: true,
     }),
   );
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix('login');
 
   app.useGlobalFilters(new HttpExceptionFilter());
 
@@ -45,7 +45,7 @@ async function bootstrap() {
     .build();
   const document = SwaggerModule.createDocument(app, config);
 
-  SwaggerModule.setup('docs', app, document, {
+  SwaggerModule.setup('login/docs', app, document, {
     swaggerOptions: {
       persistAuthorization: true,
     },
@@ -53,7 +53,7 @@ async function bootstrap() {
 
   await app.listen(port, '0.0.0.0');
   console.log(`LISTEN ON PORT : ${port}`);
-  console.log(`${await app.getUrl()}/docs`);
+  console.log(`${await app.getUrl()}/login/docs`);
 }
 
 bootstrap();

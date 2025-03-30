@@ -1,0 +1,64 @@
+name: Node.js CI/CD
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [ 22.x ]
+        # It's good to keep an eye on Node.js release schedule to use supported versions.
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+      - run: npm ci
+      # Using npm ci for a clean install based on package-lock.json, which is faster and more reliable for CI/CD.
+      - run: npm run build
+      - run: tar -czvf api-bundle.tar.gz dist node_modules package.json ecosystem.config.js
+      # Assuming you're using Next.js, you should bundle `.next` (the result of the build command) instead of `build`.
+
+      - name: Push to the dock
+        uses: appleboy/scp-action@master
+        # It's generally safer to use a specific version tag instead of master, but make sure to use the latest stable version.
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.SSH_PASS }}
+          port: 21
+          source: "./api-bundle.tar.gz"
+          target: "/home/${{ secrets.USERNAME }}/prd/login-microservice/"
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy build file on server
+        uses: appleboy/ssh-action@master
+        # Again, consider using a specific version tag for stability.
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.SSH_PASS }}
+          port: 21
+          script: |
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+            nvm use 22
+            cd /home/${{ secrets.USERNAME }}/deploy/src/login-microservice/prd
+            cp deploy.env /home/${{ secrets.USERNAME }}/prd/login-microservice/.env
+            cd /home/${{ secrets.USERNAME }}/prd/login-microservice
+            tar -xzf api-bundle.tar.gz
+            pm2 restart ecosystem.config.js || pm2 start ecosystem.config.js
+            pm2 save

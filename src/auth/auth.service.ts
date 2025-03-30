@@ -173,7 +173,6 @@ export class AuthService extends BaseRepository {
         message: 'Update user have Error',
       });
     }
-
     return {
       access_token: await this.genToken(userInfo),
       refresh_token: await this.genTokenRefresh(new Date().toISOString()),
