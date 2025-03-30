@@ -2,8 +2,10 @@ import { Controller, Get, Res } from '@nestjs/common';
 import { AppService } from './app.service';
 import { FastifyReply } from 'fastify';
 import ApiResponse from './lib/http-response';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller()
+@ApiBearerAuth()
 export class AppController {
   constructor(private readonly appService: AppService) {}
 

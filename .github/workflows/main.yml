@@ -12,7 +12,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [ 22.x ]
+        node-version: [ 23.10.0 ]
         # It's good to keep an eye on Node.js release schedule to use supported versions.
 
     steps:
@@ -25,19 +25,19 @@ jobs:
       - run: npm ci
       # Using npm ci for a clean install based on package-lock.json, which is faster and more reliable for CI/CD.
       - run: npm run build
-      - run: tar --exclude='node_modules' --exclude='dist' -czvf api-bundle.tar.gz .
+#      - run: tar -czvf api-bundle.tar.gz dist node_modules package.json ecosystem.config.js
       # Assuming you're using Next.js, you should bundle `.next` (the result of the build command) instead of `build`.
 
-      - name: Push to the dock
-        uses: appleboy/scp-action@master
-        # It's generally safer to use a specific version tag instead of master, but make sure to use the latest stable version.
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.USERNAME }}
-          password: ${{ secrets.SSH_PASS }}
-          port: 21
-          source: "./api-bundle.tar.gz"
-          target: "/home/${{ secrets.USERNAME }}/prd/login-microservice/"
+#      - name: Push to the dock
+#        uses: appleboy/scp-action@master
+#        # It's generally safer to use a specific version tag instead of master, but make sure to use the latest stable version.
+#        with:
+#          host: ${{ secrets.SSH_HOST }}
+#          username: ${{ secrets.USERNAME }}
+#          password: ${{ secrets.SSH_PASS }}
+#          port: 21
+#          source: "./api-bundle.tar.gz"
+#          target: "/home/${{ secrets.USERNAME }}/prd/login-microservice/"
 
   deploy:
     needs: build
@@ -59,7 +59,8 @@ jobs:
             cd /home/${{ secrets.USERNAME }}/deploy/src/login-microservice/prd
             cp deploy.env /home/${{ secrets.USERNAME }}/prd/login-microservice/.env
             cd /home/${{ secrets.USERNAME }}/prd/login-microservice
-            tar -xzf api-bundle.tar.gz
+            git restore .
+            git pull origin main
             pm2 stop ecosystem.config.js
             npm i
             npm run build
