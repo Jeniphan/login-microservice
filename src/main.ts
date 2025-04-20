@@ -53,7 +53,7 @@ async function bootstrap() {
 
   await app.listen(port, '0.0.0.0');
   console.log(`LISTEN ON PORT : ${port}`);
-  console.log(`${await app.getUrl()}/login/docs`);
+  console.log(`${await app.getUrl()}/docs`);
 }
 
 bootstrap();
