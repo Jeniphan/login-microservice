@@ -28,7 +28,7 @@ async function bootstrap() {
       transform: true,
     }),
   );
-  app.setGlobalPrefix('login');
+  app.setGlobalPrefix('api');
 
   app.useGlobalFilters(new HttpExceptionFilter());
 
@@ -45,7 +45,7 @@ async function bootstrap() {
     .build();
   const document = SwaggerModule.createDocument(app, config);
 
-  SwaggerModule.setup('login/docs', app, document, {
+  SwaggerModule.setup('/docs', app, document, {
     swaggerOptions: {
       persistAuthorization: true,
     },
