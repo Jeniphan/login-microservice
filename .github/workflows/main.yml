@@ -28,16 +28,15 @@ jobs:
 #      - run: tar -czvf api-bundle.tar.gz dist node_modules package.json ecosystem.config.js
       # Assuming you're using Next.js, you should bundle `.next` (the result of the build command) instead of `build`.
 
-#      - name: Push to the dock
-#        uses: appleboy/scp-action@master
-#        # It's generally safer to use a specific version tag instead of master, but make sure to use the latest stable version.
-#        with:
-#          host: ${{ secrets.SSH_HOST }}
-#          username: ${{ secrets.USERNAME }}
-#          password: ${{ secrets.SSH_PASS }}
-#          port: 21
-#          source: "./api-bundle.tar.gz"
-#          target: "/home/${{ secrets.USERNAME }}/prd/login-microservice/"
+      - name: Push to the dock
+        uses: appleboy/scp-action@master
+        # It's generally safer to use a specific version tag instead of master, but make sure to use the latest stable version.
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_PASS }}
+          source: "./api-bundle.tar.gz"
+          target: "~/prd/login-microservice/"
 
   deploy:
     needs: build
@@ -50,19 +49,10 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.USERNAME }}
           password: ${{ secrets.SSH_PASS }}
-          port: 21
           script: |
-            export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-            [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
-            nvm use 22
-            cd /home/${{ secrets.USERNAME }}/deploy/src/login-microservice/prd
-            cp deploy.env /home/${{ secrets.USERNAME }}/prd/login-microservice/.env
-            cd /home/${{ secrets.USERNAME }}/prd/login-microservice
-            git restore .
-            git pull origin main
-            pm2 stop ecosystem.config.js
-            npm i
-            npm run build
+            cd ~/deploy/src/login-microservice/prd
+            cp deploy.env ~/prd/login-microservice/.env
+            cd ~/prd/login-microservice
+            tar -xzf api-bundle.tar.gz
             pm2 restart ecosystem.config.js || pm2 start ecosystem.config.js
             pm2 save
