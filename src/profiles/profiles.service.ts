@@ -114,9 +114,10 @@ export class ProfilesService extends BaseRepository {
     query: IAdvanceFilter,
   ): Promise<IResponseAdvanceFilter<ProfileEntity>> {
     const profiles = await this.AdvanceFilter(query, ProfileEntity, {
-      app_id: true,
       table_alias: 'profiles',
       preload: ['user'],
+      with_parent_app_id: true,
+      parent_table: 'user',
     });
 
     return {
