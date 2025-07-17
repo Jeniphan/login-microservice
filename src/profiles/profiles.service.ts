@@ -80,7 +80,7 @@ export class ProfilesService extends BaseRepository {
     if (!profile_cache) {
       const profile = await this.CustomQueryParentWithAppId(ProfileEntity, {
         table_alias: 'profile',
-        parent_table: 'user',
+        parent_table: 'users',
         preload: ['user'],
       })
         .where('id = :id', { id: id })
@@ -117,7 +117,7 @@ export class ProfilesService extends BaseRepository {
       table_alias: 'profiles',
       preload: ['user'],
       with_parent_app_id: true,
-      parent_table: 'user',
+      parent_table: 'users',
     });
 
     return {
