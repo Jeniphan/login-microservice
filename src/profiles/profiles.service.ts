@@ -117,7 +117,7 @@ export class ProfilesService extends BaseRepository {
       table_alias: 'profiles',
       preload: ['user'],
       with_parent_app_id: true,
-      parent_table: 'users',
+      parent_table: 'user',
     });
 
     return {

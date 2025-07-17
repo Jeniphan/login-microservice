@@ -72,8 +72,8 @@ export class BaseRepository {
     // const tableDotAppId = option?.table_alias
     return this.CustomQuery(repository, option).innerJoinAndSelect(
       `${option.table_alias}.${option.parent_table}`,
-      `${option.parent_table}`,
-      `${option.parent_table}.app_id = :app_id`,
+      `${option.parent_table}s`,
+      `${option.parent_table}s.app_id = :app_id`,
       { app_id: this.AppId },
     );
   }
