@@ -35,6 +35,14 @@ export class ApplicationGuard implements CanActivate {
     try {
       // 💡 We're assigning the payload to the request object here
       // so that we can access it in our route handlers
+      this.logger.log({
+        baseURL: process.env.ENDPOINT_APPLICATION_MS,
+        method: process.env.METHOD_APPLICATION_VERIFY,
+        url: process.env.URL_APPLICATION_VERIFY,
+        data: {
+          token: token,
+        },
+      });
       const verifyToken: MessageResultAPI<string> =
         await this.httpClient.CallApi({
           baseURL: process.env.ENDPOINT_APPLICATION_MS,
