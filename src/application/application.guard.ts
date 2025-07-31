@@ -2,6 +2,7 @@ import {
   CanActivate,
   ExecutionContext,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { FastifyRequest } from 'fastify';
@@ -13,9 +14,11 @@ import { JwtService } from '@nestjs/jwt';
 export class ApplicationGuard implements CanActivate {
   private readonly httpClient: HttpClientService;
   private readonly jwtService: JwtService;
+  private readonly logger: Logger;
   constructor() {
     this.httpClient = new HttpClientService();
     this.jwtService = new JwtService();
+    this.logger = new Logger();
   }
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
@@ -43,6 +46,7 @@ export class ApplicationGuard implements CanActivate {
         });
 
       if (!verifyToken || verifyToken.status !== 200) {
+        this.logger.error(verifyToken);
         this.handleError('Verify Token have error!!');
       }
       request.headers['app_id'] = verifyToken.result;
