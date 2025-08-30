@@ -18,10 +18,10 @@ async function bootstrap() {
     { cors: true },
   );
 
-  await app.register(import('@fastify/rate-limit'), {
-    max: 100,
-    timeWindow: '1 minute',
-  });
+  // await app.register(import('@fastify/rate-limit'), {
+  //   max: 100,
+  //   timeWindow: '1 minute',
+  // });
 
   app.useGlobalPipes(
     new ValidationPipe({
