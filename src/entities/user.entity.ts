@@ -24,7 +24,13 @@ export class UserEntity {
   @Column({ type: 'varchar', length: 255 })
   password: string;
 
-  @Column({ type: 'bit' })
+  @Column({
+    type: 'bit',
+    transformer: {
+      to: (value: boolean) => (value ? 1 : 0),
+      from: (value: Buffer) => (value ? value[0] === 1 : false),
+    },
+  })
   first_login: boolean;
 
   @Column({ type: 'timestamp' })
