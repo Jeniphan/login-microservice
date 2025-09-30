@@ -4,6 +4,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { FastifyReply } from 'fastify';
+import { version } from '../version';
 
 export default class ApiResponse {
   constructor(private readonly reply: FastifyReply) {}
@@ -25,7 +26,7 @@ export default class ApiResponse {
     status: number = HttpStatus.OK,
     message = 'success',
   ) {
-    return this.reply.status(status).send({
+    return this.reply.header('X-API-Version', version).status(status).send({
       message,
       status,
       result,
