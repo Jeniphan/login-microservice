@@ -24,7 +24,7 @@ export class ApplicationGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const token = this.extractTokenFromHeader(request);
     if (process.env.NODE_ENV === 'develop') {
-      request.headers['app_id'] = '2de96516-8e1e-4258-b48e-f6e5056ded81';
+      request.headers['app_id'] = '470efa0b-5d62-4150-9e3c-ffbbbf6d4b87';
       return true;
     }
 

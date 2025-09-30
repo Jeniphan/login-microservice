@@ -7,7 +7,7 @@ import {
 import { DataSource } from 'typeorm';
 import { REQUEST } from '@nestjs/core';
 import { FastifyRequest } from 'fastify';
-import { BaseRepository } from '@common/base_service.service';
+import { BaseService } from '@common/base_service.service';
 import {
   AuthLogin,
   ILoginWithProvider,
@@ -20,7 +20,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ProfileEntity } from '@entities/profile.entity';
 
 @Injectable()
-export class AuthService extends BaseRepository {
+export class AuthService extends BaseService {
   constructor(
     dataSource: DataSource,
     @Inject(REQUEST) req: FastifyRequest,

@@ -39,9 +39,17 @@ export class UserEntity {
   @Column({ type: 'varchar', length: 255 })
   provider: string;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  type: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  status: string | null;
+
+  @Column({ type: 'json', nullable: true })
+  meta: object | null;
+
   @CreateDateColumn({
     type: 'timestamp',
-    default: () => 'CURRENT_TIMESTAMP',
   })
   created_at: Date;
 

@@ -3,7 +3,7 @@ import {
   Injectable,
   InternalServerErrorException,
 } from '@nestjs/common';
-import { BaseRepository } from '../common/base_service.service';
+import { BaseService } from '@common/base_service.service';
 import { DataSource } from 'typeorm';
 import { REQUEST } from '@nestjs/core';
 import { FastifyRequest } from 'fastify';
@@ -15,7 +15,7 @@ import { AddressEntity } from '@entities/address.entity';
 import { IAdvanceFilter, IResponseAdvanceFilter } from '@dto/base.dto';
 
 @Injectable()
-export class AddressService extends BaseRepository {
+export class AddressService extends BaseService {
   constructor(dataSource: DataSource, @Inject(REQUEST) req: FastifyRequest) {
     super(dataSource, req);
   }

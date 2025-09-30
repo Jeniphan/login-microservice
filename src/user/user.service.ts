@@ -4,7 +4,6 @@ import {
   InternalServerErrorException,
   Scope,
 } from '@nestjs/common';
-import { BaseRepository } from '../common/base_service.service';
 import { DataSource } from 'typeorm';
 import { ICreateUserPayload, IUpdateUserPayload } from '@dto/user/user.dto';
 import { UserEntity } from '@entities/user.entity';
@@ -13,9 +12,10 @@ import { IAdvanceFilter, IResponseAdvanceFilter } from '@dto/base.dto';
 import { REQUEST } from '@nestjs/core';
 import { FastifyRequest } from 'fastify';
 import CacheService from '@lib/cache';
+import { BaseService } from '@common/base_service.service';
 
 @Injectable({ scope: Scope.REQUEST })
-export class UserService extends BaseRepository {
+export class UserService extends BaseService {
   constructor(
     dataSource: DataSource,
     @Inject(REQUEST) request: FastifyRequest,
@@ -43,10 +43,13 @@ export class UserService extends BaseRepository {
       app_id: this.AppId,
       username: payload.username,
       password: await bcrypt.hash(payload.password, salt),
-      provider: 'credentials',
+      provider: payload.providers ? payload.providers : 'credentials',
       last_active: new Date(),
       first_login: true,
       deleted_at: null,
+      type: payload.type ? payload.type : null,
+      status: payload.status ? payload.status : 'active',
+      meta: payload.meta ? payload.meta : null,
     });
 
     await userRepo.save(createUser);

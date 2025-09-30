@@ -1,15 +1,4 @@
-import {
-  IsArray,
-  IsDateString,
-  IsIn,
-  IsNumber,
-  IsOptional,
-  IsString,
-  Min,
-} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
-import { IsDoubleArrayOfType } from '@validators/base.validater';
 
 export class IResponseAdvanceFilter<T> {
   total: number;
@@ -18,146 +7,124 @@ export class IResponseAdvanceFilter<T> {
 }
 
 export class IAdvanceFilter {
-  @IsOptional()
   @ApiProperty({
     type: () => String,
     isArray: true,
   })
-  @IsString({ each: true })
-  @IsArray()
-  @Type(() => String)
   filter_by?: string[];
 
   @ApiProperty({
-    isArray: true,
-    example: [['example']],
-  })
-  @IsDoubleArrayOfType('string')
-  @IsArray()
-  @IsOptional()
-  filter?: string[][];
-
-  @ApiProperty({
     enum: ['and', 'or'],
     default: 'and',
   })
-  @IsIn(['or', 'and'])
-  @IsString()
-  @IsOptional()
-  filter_condition?: 'and' | 'or' = 'and';
+  filter_condition: 'and' | 'or' = 'and';
 
-  @IsOptional()
+  @ApiProperty({
+    isArray: true,
+    example: [['example']],
+  })
+  filter?: string[][];
+
   @ApiProperty({
     type: () => String,
     isArray: true,
   })
-  @IsString({ each: true })
-  @IsArray()
-  @Type(() => String)
   filter_nested_by?: string[];
+
+  @ApiProperty({
+    enum: ['and', 'or'],
+  })
+  filter_nested_condition: 'and' | 'or' = 'and';
 
   @ApiProperty({
     isArray: true,
     example: [['example']],
   })
-  @IsDoubleArrayOfType('string')
-  @IsArray()
-  @IsOptional()
   filter_nested?: string[][];
 
   @ApiProperty({
-    enum: ['and', 'or'],
-    default: 'and',
+    isArray: true,
+    type: () => String,
   })
-  @IsIn(['or', 'and'])
-  @IsString()
-  @IsOptional()
-  filter_nested_condition: 'and' | 'or' = 'and';
+  filter_nested_parent_by?: string[];
 
-  @ApiProperty()
-  @IsArray()
-  @IsOptional()
+  @ApiProperty({
+    enum: ['and', 'or'],
+  })
+  filter_nested_parent_condition: 'and' | 'or' = 'and';
+
+  @ApiProperty({
+    isArray: true,
+    example: [['example']],
+  })
+  filter_nested_parent?: string[][];
+
+  @ApiProperty({
+    isArray: true,
+    type: () => String,
+  })
   search_by?: string[];
 
   @ApiProperty()
-  @IsString()
-  @IsOptional()
   search?: string;
 
   @ApiProperty()
-  @IsString()
-  @IsOptional()
-  sort_by?: string;
+  start_by?: string;
+
+  @ApiProperty()
+  start?: string;
+
+  @ApiProperty()
+  end_by?: string;
+
+  @ApiProperty()
+  end?: string;
 
   @ApiProperty({
-    enum: ['DESC', 'ASC'],
-    default: 'ASC',
+    enum: ['and', 'or'],
   })
-  @IsString()
-  @IsIn(['DESC', 'ASC'])
-  @IsOptional()
-  sort?: 'DESC' | 'ASC';
-
-  @ApiProperty()
-  @IsString()
-  @IsOptional()
-  filter_date_start_by?: string;
-
-  @ApiProperty()
-  @IsDateString()
-  @IsOptional()
-  start_date?: Date;
-
-  @ApiProperty()
-  @IsString()
-  @IsOptional()
-  filter_date_end_by?: string;
-
-  @ApiProperty()
-  @IsDateString()
-  @IsOptional()
-  end_date?: Date;
-
-  @ApiProperty()
-  @IsString()
-  @IsOptional()
-  group_by?: string;
+  start_and_end_condition: 'and' | 'or' = 'and';
 
   @ApiProperty({
-    enum: ['DESC', 'ASC'],
-    default: 'ASC',
+    type: () => String,
+    isArray: true,
   })
-  @IsString()
-  @IsIn(['DESC', 'ASC'])
-  @IsOptional()
-  group_sort?: 'DESC' | 'ASC' = 'ASC';
+  sort_by?: string[];
+
+  @ApiProperty({
+    enum: ['desc', 'asc'],
+    default: 'asc',
+  })
+  sort?: ('desc' | 'asc')[];
 
   @ApiProperty()
-  @IsString()
-  @IsOptional()
-  group_sort_by?: string;
-
-  @ApiProperty()
-  @IsNumber()
-  @Min(1)
-  @IsOptional()
   page?: number;
 
   @ApiProperty()
-  @IsNumber()
-  @Min(1)
-  @IsOptional()
   per_page?: number;
+
+  @ApiProperty({
+    type: () => String,
+    isArray: true,
+  })
+  group_by?: string[];
+
+  @ApiProperty()
+  group_sort_by?: string;
+
+  @ApiProperty({
+    enum: ['max', 'min'],
+  })
+  group_sort?: 'max' | 'min';
+
+  @ApiProperty()
+  limit?: number;
 }
 
 export interface IOptionCustomQuery {
   table_alias?: string;
   preload?: string[];
   user_id_alias?: string;
-  parent_table?: string;
-  nested_table?: string;
-  app_id?: boolean;
-  with_parent_app_id?: boolean;
 
   [Key: string]: any;
 }

@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsNumber, IsObject, IsOptional, IsString, Min } from 'class-validator';
 
 export class ICreateUserPayload {
   @ApiProperty()
@@ -9,6 +9,26 @@ export class ICreateUserPayload {
   @ApiProperty()
   @IsString()
   password: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsOptional()
+  type?: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsOptional()
+  status?: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsOptional()
+  providers?: string;
+
+  @ApiProperty()
+  @IsObject()
+  @IsOptional()
+  meta?: object;
 }
 
 export class IUpdateUserPayload {
@@ -31,4 +51,24 @@ export class IUpdateUserPayload {
   @IsString()
   @IsOptional()
   provider?: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsOptional()
+  type?: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsOptional()
+  status?: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsOptional()
+  providers?: string;
+
+  @ApiProperty()
+  @IsObject()
+  @IsOptional()
+  meta?: object;
 }

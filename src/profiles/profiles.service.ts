@@ -7,7 +7,7 @@ import {
   ICreateNewProfile,
   IUpdateProfilePayload,
 } from '@dto/profile/profile.dto';
-import { BaseRepository } from '@common/base_service.service';
+import { BaseService } from '@common/base_service.service';
 import { ProfileEntity } from '@entities/profile.entity';
 import { IAdvanceFilter, IResponseAdvanceFilter } from '@dto/base.dto';
 import { DataSource } from 'typeorm';
@@ -16,7 +16,7 @@ import { FastifyRequest } from 'fastify';
 import CacheService from '@lib/cache';
 
 @Injectable()
-export class ProfilesService extends BaseRepository {
+export class ProfilesService extends BaseService {
   constructor(
     dataSource: DataSource,
     @Inject(REQUEST) req: FastifyRequest,

@@ -8,23 +8,45 @@ import {
 import { ENTITY_MANAGER_KEY } from './transaction.interceptor';
 import { FastifyRequest } from 'fastify';
 import { IAdvanceFilter, IOptionCustomQuery } from '@dto/base.dto';
+import { UUIDV4 } from '@helper/uuid.helper';
 
-export class BaseRepository {
+/**
+ * BaseService provides common database query utilities for services.
+ * Includes methods for repository access, advanced filtering, and query customization.
+ */
+export class BaseService {
+  /**
+   * @param dataSource - TypeORM DataSource instance.
+   * @param request - FastifyRequest object, used for headers and transaction context.
+   */
+
   constructor(
     private dataSource: DataSource,
     private request: FastifyRequest,
   ) {}
 
+  /**
+   * Retrieves the application ID from the request headers, defaults to '1' if not present.
+   */
   get AppId() {
     return (this.request.headers['app_id'] as string) ?? '1';
   }
 
+  /**
+   * Gets the repository for a given entity class, using the current transaction if available.
+   * @param entityCls - The entity class.
+   */
   protected getRepository<T>(entityCls: new () => T): Repository<T> {
     const entityManager: EntityManager =
       this.request[ENTITY_MANAGER_KEY] ?? this.dataSource.manager;
     return entityManager.getRepository(entityCls);
   }
 
+  /**
+   * Creates a SelectQueryBuilder for the given repository, with optional table alias and preloads.
+   * @param repository - The entity class.
+   * @param option - Custom query options (alias, preload, etc).
+   */
   protected CustomQuery<T>(
     repository: new () => T,
     option?: IOptionCustomQuery,
@@ -51,6 +73,11 @@ export class BaseRepository {
     return q;
   }
 
+  /**
+   * Creates a SelectQueryBuilder with an app_id filter.
+   * @param repository - The entity class.
+   * @param option - Custom query options.
+   */
   protected CustomQueryWithAppId<T>(
     repository: new () => T,
     option?: IOptionCustomQuery,
@@ -58,27 +85,20 @@ export class BaseRepository {
     const tableDotAppId = option?.table_alias
       ? `${option.table_alias}.app_id`
       : 'app_id';
-
     return this.CustomQuery(repository, option).where(
       `${tableDotAppId} = :appId`,
       { appId: (this.request.headers['app_id'] as string) ?? '1' },
     );
   }
 
-  protected CustomQueryParentWithAppId<T>(
-    repository: new () => T,
-    option?: IOptionCustomQuery,
-  ) {
-    // const tableDotAppId = option?.table_alias
-    return this.CustomQuery(repository, option).innerJoinAndSelect(
-      `${option.table_alias}.${option.parent_table}`,
-      `${option.parent_table}s`,
-      `${option.parent_table}s.app_id = :app_id`,
-      { app_id: this.AppId },
-    );
-  }
-
-  protected async AdvanceFilter<T>(
+  /**
+   * Applies advanced filtering, searching, sorting, grouping, and pagination to a query.
+   * @param query - Advanced query parameters.
+   * @param repository - The entity class.
+   * @param option - Custom query options.
+   * @returns An object containing the filtered data and total count.
+   */
+  async AdvanceFilter<T>(
     query: IAdvanceFilter,
     repository: new () => T,
     option?: IOptionCustomQuery,
@@ -86,44 +106,65 @@ export class BaseRepository {
     data: T[];
     total: number;
   }> {
-    let q = this.CustomQuery<T>(repository, { ...option, table_alias: 't1' });
+    let q = this.CustomQuery<T>(repository, option);
 
     if (option && option.app_id) {
-      q = this.CustomQueryWithAppId(repository, {
-        ...option,
-        table_alias: 't1',
-      });
-    } else if (option && option.with_parent_app_id && option.parent_table) {
-      q = this.CustomQueryParentWithAppId(repository, {
-        ...option,
-        table_alias: 't1',
-      });
-    }
-
-    //Join Table Nested
-    if (option.nested_table) {
-      q = q.leftJoinAndSelect(
-        `${option.table_alias}.${option.nested_table}s`,
-        option.nested_table,
-      );
+      q = this.CustomQueryWithAppId(repository, option);
     }
 
     let total = 0;
-    // filter
+    // Filter (supports exclusion with '!' prefix in filter values)
     if (
       query.filter_by &&
       query.filter_by.length > 0 &&
       query.filter &&
       query.filter.length > 0
     ) {
-      //condition 'and'
+      const buildExpr = (col: string) => {
+        if (col.includes('.')) {
+          const [jsonColumn, jsonField] = col.split('.');
+          return `JSON_UNQUOTE(JSON_EXTRACT(${
+            option?.table_alias
+              ? `${option.table_alias}.${jsonColumn}`
+              : jsonColumn
+          }, '$.${jsonField}'))`;
+        }
+        return `${option?.table_alias ? `${option.table_alias}.${col}` : col}`;
+      };
+
       if (query.filter_condition === 'and') {
         q = q.andWhere(
           new Brackets((qb) => {
-            query.filter_by.map((filter_by, index) => {
-              qb = qb.where(`t1.${filter_by} in (:...filter)`, {
-                filter: query.filter[index],
-              });
+            query.filter_by.forEach((filter_by, index) => {
+              const rawValues = Array.isArray(query.filter[index])
+                ? query.filter[index]
+                : [query.filter[index]];
+
+              const includeVals = rawValues.filter(
+                (v) => !(typeof v === 'string' && v.startsWith('!')),
+              );
+              const excludeVals = rawValues
+                .filter((v) => typeof v === 'string' && v.startsWith('!'))
+                .map((v: string) => v.substring(1));
+
+              if (includeVals.length === 0 && excludeVals.length === 0) return;
+
+              const uuid = UUIDV4().split('-')[0];
+              const keyBase = `${uuid}_${index}`;
+              const keyIn = `${keyBase}_in`;
+              const keyNotIn = `${keyBase}_notin`;
+              const expr = buildExpr(filter_by);
+
+              if (includeVals.length > 0) {
+                qb = qb.andWhere(`${expr} IN (:...${keyIn})`, {
+                  [keyIn]: includeVals,
+                });
+              }
+              if (excludeVals.length > 0) {
+                qb = qb.andWhere(`${expr} NOT IN (:...${keyNotIn})`, {
+                  [keyNotIn]: excludeVals,
+                });
+              }
             });
           }),
         );
@@ -131,59 +172,90 @@ export class BaseRepository {
         // Condition 'or'
         q = q.andWhere(
           new Brackets((qb) => {
-            query.filter_by.map((filter_by, index) => {
-              qb = qb.orWhere(`t1.${filter_by} in (:...filter)`, {
-                filter: query.filter[index],
-              });
+            query.filter_by.forEach((filter_by, index) => {
+              const rawValues = Array.isArray(query.filter[index])
+                ? query.filter[index]
+                : [query.filter[index]];
+
+              const includeVals = rawValues.filter(
+                (v) => !(typeof v === 'string' && v.startsWith('!')),
+              );
+              const excludeVals = rawValues
+                .filter((v) => typeof v === 'string' && v.startsWith('!'))
+                .map((v: string) => v.substring(1));
+
+              if (includeVals.length === 0 && excludeVals.length === 0) return;
+
+              const uuid = UUIDV4().split('-')[0];
+              const keyBase = `${uuid}_${index}`;
+              const keyIn = `${keyBase}_in`;
+              const keyNotIn = `${keyBase}_notin`;
+              const expr = buildExpr(filter_by);
+
+              qb = qb.orWhere(
+                new Brackets((subQb) => {
+                  if (includeVals.length > 0) {
+                    subQb = subQb.andWhere(`${expr} IN (:...${keyIn})`, {
+                      [keyIn]: includeVals,
+                    });
+                  }
+                  if (excludeVals.length > 0) {
+                    subQb = subQb.andWhere(`${expr} NOT IN (:...${keyNotIn})`, {
+                      [keyNotIn]: excludeVals,
+                    });
+                  }
+                }),
+              );
             });
           }),
         );
       }
     }
 
-    //filter nested
+    // Filter nested
     if (
-      query.filter_nested_by &&
-      query.filter_nested_by.length > 0 &&
       query.filter_nested &&
-      query.filter_nested.length > 0
+      query.filter_nested.length > 0 &&
+      query.filter_nested_by &&
+      query.filter_nested_by.length > 0
     ) {
-      if (query.filter_nested_condition === 'and') {
-        q = q.andWhere(
-          new Brackets((qb) => {
-            query.filter_nested_by.map((filter_nested_by, index) => {
-              qb = qb.where(
-                `${
-                  option?.nested_table
-                    ? `${option.nested_table}.${filter_nested_by}`
-                    : filter_nested_by
-                } IN (:...filter)`,
-                {
-                  filter: query.filter_nested[index],
-                },
-              );
+      // Ensure joins for all nested tables
+      const joinedTables = new Set<string>();
+      query.filter_nested_by.forEach((nestedBy) => {
+        const [table] = nestedBy.split('.');
+        if (!joinedTables.has(table)) {
+          q = q.leftJoinAndSelect(
+            option?.table_alias ? `${option.table_alias}.${table}` : table,
+            table,
+            `${option.table_alias}.id = ${table}.${option.table_alias}_id`,
+          );
+          joinedTables.add(table);
+        }
+      });
+
+      q = q.andWhere(
+        new Brackets((qb) => {
+          if (query.filter_nested_condition === 'and') {
+            query.filter_nested_by.forEach((nestedBy, idx) => {
+              const [table, column] = nestedBy.split('.');
+              const uuid = UUIDV4().split('-')[0];
+              const key = `nested_${uuid}_${idx}`;
+              qb = qb.andWhere(`${table}.${column} IN (:...${key})`, {
+                [key]: query.filter_nested[idx],
+              });
             });
-          }),
-        );
-      } else {
-        // Condition 'or'
-        q = q.andWhere(
-          new Brackets((qb) => {
-            query.filter_nested_by.map((filter_nested_by, index) => {
-              qb = qb.orWhere(
-                `${
-                  option?.nested_table
-                    ? `${option.nested_table}.${filter_nested_by}`
-                    : filter_nested_by
-                } in (:...filter)`,
-                {
-                  filter: query.filter_nested[index],
-                },
-              );
+          } else {
+            query.filter_nested_by.forEach((nestedBy, idx) => {
+              const [table, column] = nestedBy.split('.');
+              const uuid = UUIDV4().split('-')[0];
+              const key = `nested_${uuid}_${idx}`;
+              qb = qb.orWhere(`${table}.${column} IN (:...${key})`, {
+                [key]: query.filter_nested[idx],
+              });
             });
-          }),
-        );
-      }
+          }
+        }),
+      );
     }
 
     //Search
@@ -196,68 +268,228 @@ export class BaseRepository {
       q = q.andWhere(
         new Brackets((qb) => {
           query.search_by.map((search_by) => {
-            qb = qb.orWhere(`t1.${search_by} like :search`, {
-              search: `%${query.search}%`,
-            });
+            if (search_by.includes('.')) {
+              const [jsonColumn, jsonField] = search_by.split('.');
+              qb = qb.orWhere(
+                `JSON_UNQUOTE(JSON_EXTRACT(${
+                  option?.table_alias
+                    ? `${option.table_alias}.${jsonColumn}`
+                    : jsonColumn
+                }, '$.${jsonField}')) like :search`,
+                {
+                  search: `%${query.search}%`,
+                },
+              );
+            } else {
+              qb = qb.orWhere(
+                `${
+                  option?.table_alias
+                    ? `${option.table_alias}.${search_by}`
+                    : search_by
+                } like :search`,
+                {
+                  search: `%${query.search}%`,
+                },
+              );
+            }
           });
         }),
       );
     }
 
-    //Start
-    if (
-      query.filter_date_start_by &&
-      query.filter_date_start_by !== '' &&
-      query.start_date
-    ) {
-      q = q.andWhere(`t1.${query.filter_date_start_by} >= :start_date`, {
-        start_date: query.start_date,
-      });
-    }
+    //Start And End
+    if ((query.start && query.start_by) || (query.end && query.end_by)) {
+      q = q.andWhere(
+        new Brackets((qb) => {
+          if (query.start_and_end_condition === 'and') {
+            //Start
+            if (query.start && query.start_by) {
+              if (query.start_by.includes('.')) {
+                const [jsonColumn, jsonField] = query.start_by.split('.');
+                qb = qb.andWhere(
+                  `JSON_UNQUOTE(JSON_EXTRACT(${
+                    option?.table_alias
+                      ? `${option.table_alias}.${jsonColumn}`
+                      : jsonColumn
+                  }, '$.${jsonField}')) >= :start_date`,
+                  {
+                    start_date: query.start,
+                  },
+                );
+              } else {
+                qb = qb.andWhere(
+                  `${
+                    option?.table_alias
+                      ? `${option.table_alias}.${query.start_by}`
+                      : query.start_by
+                  } >= :start_date`,
+                  {
+                    start_date: query.start,
+                  },
+                );
+              }
+            }
 
-    //End
-    if (
-      query.filter_date_end_by &&
-      query.filter_date_end_by !== '' &&
-      query.end_date
-    ) {
-      q = q.where(`t1.${query.filter_date_end_by} <= :end_date`, {
-        end_date: query.end_date,
-      });
+            //End
+            if (query.end && query.end_by) {
+              if (query.end_by.includes('.')) {
+                const [jsonColumn, jsonField] = query.end_by.split('.');
+                qb = qb.andWhere(
+                  `JSON_UNQUOTE(JSON_EXTRACT(${
+                    option?.table_alias
+                      ? `${option.table_alias}.${jsonColumn}`
+                      : jsonColumn
+                  }, '$.${jsonField}')) >= :end_date`,
+                  {
+                    end_date: query.end,
+                  },
+                );
+              } else {
+                qb = qb.andWhere(
+                  `${
+                    option?.table_alias
+                      ? `${option.table_alias}.${query.end_by}`
+                      : query.end_by
+                  } <= :end_date`,
+                  {
+                    end_date: query.end,
+                  },
+                );
+              }
+            }
+          } else {
+            //Start
+            if (query.start && query.start_by) {
+              if (query.start_by.includes('.')) {
+                const [jsonColumn, jsonField] = query.start_by.split('.');
+                qb = qb.orWhere(
+                  `JSON_UNQUOTE(JSON_EXTRACT(${
+                    option?.table_alias
+                      ? `${option.table_alias}.${jsonColumn}`
+                      : jsonColumn
+                  }, '$.${jsonField}')) >= :start_date`,
+                  {
+                    start_date: query.start,
+                  },
+                );
+              } else {
+                qb = qb.orWhere(
+                  `${
+                    option?.table_alias
+                      ? `${option.table_alias}.${query.start_by}`
+                      : query.start_by
+                  } >= :start_date`,
+                  {
+                    start_date: query.end,
+                  },
+                );
+              }
+            }
+
+            //End
+            if (query.end && query.end_by) {
+              if (query.end_by.includes('.')) {
+                const [jsonColumn, jsonField] = query.end_by.split('.');
+                qb = qb.orWhere(
+                  `JSON_UNQUOTE(JSON_EXTRACT(${
+                    option?.table_alias
+                      ? `${option.table_alias}.${jsonColumn}`
+                      : jsonColumn
+                  }, '$.${jsonField}')) >= :end_date`,
+                  {
+                    end_date: query.end,
+                  },
+                );
+              } else {
+                qb = qb.orWhere(
+                  `${
+                    option?.table_alias
+                      ? `${option.table_alias}.${query.end_by}`
+                      : query.end_by
+                  } <= :end_date`,
+                  {
+                    end_date: query.end,
+                  },
+                );
+              }
+            }
+          }
+          return qb;
+        }),
+      );
     }
 
     //Sort
-    if (query.sort && query.sort_by && query.sort_by !== '') {
-      q = q.orderBy(`t1.${query.sort_by}`, query.sort);
+    if (query.sort && query.sort_by && query.sort_by.length > 0) {
+      for (let i = 0; i < query.sort_by.length; i++) {
+        if (query.sort_by[i].includes('.')) {
+          const [jsonColumn, jsonField] = query.sort_by[i].split('.');
+          const uuid = UUIDV4().split('-')[0];
+          q = q.addSelect(
+            `JSON_UNQUOTE(JSON_EXTRACT(${
+              option?.table_alias
+                ? `${option.table_alias}.${jsonColumn}`
+                : jsonColumn
+            }, '$.${jsonField}'))`,
+            uuid,
+          );
+          q = q.orderBy(uuid, query.sort[i].toUpperCase() as 'DESC' | 'ASC');
+        } else {
+          q = q.orderBy(
+            `${
+              option?.table_alias
+                ? `${option.table_alias}.${query.sort_by[i]}`
+                : query.sort_by
+            }`,
+            query.sort[i].toUpperCase() as 'DESC' | 'ASC',
+          );
+        }
+      }
     }
 
-    //Group by
-    if (query.group_by && query.group_sort_by && query.group_sort) {
-      if (query.group_sort === 'DESC') {
-        q = q.innerJoinAndSelect(
-          (subQuery) => {
-            return subQuery
-              .from(repository, 'g')
-              .select(`g.${query.group_by}`, query.group_by) // Select app_id for joining condition
-              .addSelect(`MAX(g.${query.group_sort_by})`, 'm') // Get maximum id for each app_id
-              .groupBy(`g.${query.group_by}`); // Group by app_id to ensure uniqueness
-          },
-          't2', // Alias for the subquery
-          `t1.${query.group_by} = t2.${query.group_by} AND t1.${query.group_sort_by} = t2.m`,
-        );
-      } else {
-        q = q.innerJoinAndSelect(
-          (subQuery) => {
-            return subQuery
-              .from(repository, 'g')
-              .select(`g.${query.group_by}`, query.group_by) // Select app_id for joining condition
-              .addSelect(`MIN(g.${query.group_sort_by})`, 'm') // Get maximum id for each app_id
-              .groupBy(`g.${query.group_by}`); // Group by app_id to ensure uniqueness
-          },
-          't2', // Alias for the subquery
-          `t1.${query.group_by} = t2.${query.group_by} AND t1.${query.group_sort_by} = t2.m`,
-        );
-      }
+    //Group
+    if (query.group_by && query.group_sort && query.group_sort_by) {
+      let onTable = '';
+      query.group_by.forEach((group_by, index) => {
+        if (index !== 0) {
+          onTable = onTable + ` AND ${group_by} = ${group_by}`;
+        } else {
+          onTable = `${group_by} = ${group_by}`;
+        }
+      });
+
+      q = q.innerJoinAndSelect(
+        (qb) => {
+          qb = qb
+            .select(query.group_by.map((select) => `sub.${select}`))
+            .from(repository, 'sub');
+
+          if (query.group_sort === 'max') {
+            qb = qb.addSelect(
+              `MAX(sub.${query.group_sort_by})`,
+              'group_sort_value',
+            );
+          } else {
+            qb = qb.addSelect(
+              `MIN(sub.${query.group_sort_by})`,
+              'group_sort_value',
+            );
+          }
+
+          if (query.group_by.length > 0) {
+            for (const group of query.group_by) {
+              qb = qb.addGroupBy(`sub.${group}`);
+            }
+          }
+          return qb;
+        },
+        // StockEntity,
+        'subQuery',
+        onTable +
+          ` AND group_sort_value = ${
+            option.table_alias ? option.table_alias + '.' : undefined
+          }${query.group_sort_by}`,
+      );
     }
 
     total = (await q.getMany()).length;
@@ -269,12 +501,30 @@ export class BaseRepository {
       query.per_page &&
       query.per_page !== 0
     ) {
-      if (query.page <= 1) query.page = 0;
-      q = q.skip(query.page * query.per_page).take(query.per_page);
+      // if (query.page <= 1) query.page = 0;
+      q = q.skip((query.page - 1) * query.per_page).take(query.per_page);
     }
     return {
       data: await q.getMany(),
       total,
     };
+  }
+
+  /**
+   * Creates a SelectQueryBuilder with an inner join to a parent table, filtered by app_id.
+   * @param repository - The entity class.
+   * @param option - Custom query options (must include parent_table).
+   */
+  protected CustomQueryParentWithAppId<T>(
+    repository: new () => T,
+    option?: IOptionCustomQuery,
+  ) {
+    // const tableDotAppId = option?.table_alias
+    return this.CustomQuery(repository, option).innerJoinAndSelect(
+      `${option.table_alias}.${option.parent_table}`,
+      `${option.parent_table}`,
+      `${option.parent_table}.app_id = :app_id`,
+      { app_id: this.AppId },
+    );
   }
 }
