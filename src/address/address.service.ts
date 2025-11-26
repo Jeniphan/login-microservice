@@ -91,7 +91,8 @@ export class AddressService extends BaseService {
   ): Promise<IResponseAdvanceFilter<AddressEntity>> {
     const profiles = await this.AdvanceFilter(query, AddressEntity, {
       app_id: true,
-      table_alias: 'profiles',
+      table_alias: 'address',
+      parent_table: 'user',
       preload: ['user'],
     });
 

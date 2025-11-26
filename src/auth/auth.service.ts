@@ -151,6 +151,7 @@ export class AuthService extends BaseService {
       preload: ['profiles', 'address'],
     })
       .andWhere('user.username = :username', { username: payload.username })
+      .andWhere('user.status = :status', { status: 'active' })
       .getOneOrFail();
 
     //Check password

@@ -17,14 +17,18 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: latest
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'npm'
-      - run: npm ci
+          cache: 'pnpm'
+      - run: pnpm i
       # Using npm ci for a clean install based on package-lock.json, which is faster and more reliable for CI/CD.
-      - run: npm run build
+      - run: pnpm build
       - run: tar -czvf api-bundle.tar.gz dist node_modules package.json ecosystem.config.js
       # Assuming you're using Next.js, you should bundle `.next` (the result of the build command) instead of `build`.
 

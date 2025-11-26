@@ -1,4 +1,6 @@
+import { IsArray, IsNumber, Min } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 
 export class IResponseAdvanceFilter<T> {
   total: number;
@@ -17,7 +19,7 @@ export class IAdvanceFilter {
     enum: ['and', 'or'],
     default: 'and',
   })
-  filter_condition: 'and' | 'or' = 'and';
+  filter_condition?: 'and' | 'or' = 'and';
 
   @ApiProperty({
     isArray: true,
@@ -34,7 +36,7 @@ export class IAdvanceFilter {
   @ApiProperty({
     enum: ['and', 'or'],
   })
-  filter_nested_condition: 'and' | 'or' = 'and';
+  filter_nested_condition?: 'and' | 'or' = 'and';
 
   @ApiProperty({
     isArray: true,
@@ -51,7 +53,7 @@ export class IAdvanceFilter {
   @ApiProperty({
     enum: ['and', 'or'],
   })
-  filter_nested_parent_condition: 'and' | 'or' = 'and';
+  filter_nested_parent_condition?: 'and' | 'or' = 'and';
 
   @ApiProperty({
     isArray: true,
@@ -83,7 +85,7 @@ export class IAdvanceFilter {
   @ApiProperty({
     enum: ['and', 'or'],
   })
-  start_and_end_condition: 'and' | 'or' = 'and';
+  start_and_end_condition?: 'and' | 'or' = 'and';
 
   @ApiProperty({
     type: () => String,
@@ -119,12 +121,40 @@ export class IAdvanceFilter {
 
   @ApiProperty()
   limit?: number;
+
+  @ApiProperty({
+    type: () => String,
+    isArray: true,
+  })
+  preload?: string[];
 }
 
 export interface IOptionCustomQuery {
   table_alias?: string;
   preload?: string[];
   user_id_alias?: string;
+  parent_table?: string;
+  nested_table?: string;
+  app_id?: boolean;
+  with_parent_app_id?: boolean;
 
   [Key: string]: any;
+}
+
+export class IGetShow {
+  @ApiProperty()
+  @IsNumber()
+  @Min(1)
+  @Type(() => Number)
+  id: number;
+}
+
+export class IDeleteByIds {
+  @ApiProperty({
+    type: () => Number,
+    isArray: true,
+  })
+  @IsArray()
+  @Type(() => Number)
+  ids: number[];
 }

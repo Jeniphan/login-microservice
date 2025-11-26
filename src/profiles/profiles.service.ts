@@ -36,7 +36,11 @@ export class ProfilesService extends BaseService {
   }
 
   async UpdateProfile(payload: IUpdateProfilePayload): Promise<ProfileEntity> {
-    const profile = await this.CustomQueryWithAppId(ProfileEntity)
+    const profile = await this.CustomQueryParentWithAppId(ProfileEntity, {
+      app_id: true,
+      parent_table: 'user',
+      table_alias: 'profiles',
+    })
       .where('id = :id', { id: payload.id })
       .getOneOrFail();
 
@@ -116,7 +120,6 @@ export class ProfilesService extends BaseService {
     const profiles = await this.AdvanceFilter(query, ProfileEntity, {
       table_alias: 'profiles',
       preload: ['user'],
-      with_parent_app_id: true,
       parent_table: 'user',
     });
 
