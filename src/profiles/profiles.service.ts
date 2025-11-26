@@ -2,6 +2,7 @@ import {
   Inject,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import {
   ICreateNewProfile,
@@ -36,30 +37,51 @@ export class ProfilesService extends BaseService {
   }
 
   async UpdateProfile(payload: IUpdateProfilePayload): Promise<ProfileEntity> {
-    const profile = await this.CustomQueryParentWithAppId(ProfileEntity, {
-      app_id: true,
-      parent_table: 'user',
-      table_alias: 'profiles',
-    })
-      .where('user.id = :id', { id: payload.id })
-      .getOneOrFail();
+    try {
+      const profile = await this.CustomQueryParentWithAppId(ProfileEntity, {
+        app_id: true,
+        parent_table: 'user',
+        table_alias: 'profiles',
+      })
+        .where('profiles.id = :id', { id: payload.id })
+        .getOneOrFail();
 
-    const ProfileRepo = this.getRepository(ProfileEntity);
+      const profileRepo = this.getRepository(ProfileEntity);
 
-    const update = await ProfileRepo.update(
-      {
-        id: payload.id,
-      },
-      { ...payload },
-    );
+      // Merge only allowed updatable fields to avoid overwriting unrelated properties
+      const { id, ...updatable } = payload as any;
+      const merged = profileRepo.merge(profile, updatable);
 
-    if (!update || update.affected === 0) {
+      const saved = await profileRepo.save(merged);
+
+      // Update cache so subsequent reads get fresh data
+      await this.cache.Set<ProfileEntity>(
+        'profile',
+        this.AppId,
+        saved.id.toString(),
+        saved,
+      );
+
+      return saved;
+    } catch (err) {
+      // Handle not found more clearly
+      const errName = (err && (err.name || '')).toString();
+      if (
+        errName === 'EntityNotFound' ||
+        errName === 'EntityNotFoundError' ||
+        (err &&
+          err.message &&
+          err.message.toLowerCase().includes('could not find'))
+      ) {
+        throw new NotFoundException({ message: 'Profile not found' });
+      }
+      // Log and rethrow a generic internal error
+      // eslint-disable-next-line no-console
+      console.error('[ProfilesService][UpdateProfile] error:', err);
       throw new InternalServerErrorException({
-        message: 'Update profile have Error',
+        message: 'Update profile have error',
       });
     }
-
-    return profile;
   }
 
   async GetAllProfile(): Promise<ProfileEntity[]> {
