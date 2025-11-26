@@ -15,6 +15,7 @@ import { DataSource } from 'typeorm';
 import { REQUEST } from '@nestjs/core';
 import { FastifyRequest } from 'fastify';
 import CacheService from '@lib/cache';
+import { UserEntity } from '@entities/user.entity';
 
 @Injectable()
 export class ProfilesService extends BaseService {
@@ -33,6 +34,22 @@ export class ProfilesService extends BaseService {
     });
 
     await profileRepo.save(create);
+
+    // Update cache so subsequent reads get fresh data
+    const user = await this.CustomQueryWithAppId(UserEntity, {
+      table_alias: 'user',
+      preload: ['profiles', 'address'],
+    })
+      .where('user.id = :id', { id: create.user_id })
+      .getOneOrFail();
+
+    await this.cache.Set<UserEntity>(
+      'user',
+      this.AppId,
+      user.id.toString(),
+      user,
+    );
+
     return create;
   }
 
@@ -55,11 +72,18 @@ export class ProfilesService extends BaseService {
       const saved = await profileRepo.save(merged);
 
       // Update cache so subsequent reads get fresh data
-      await this.cache.Set<ProfileEntity>(
-        'profile',
+      const user = await this.CustomQueryWithAppId(UserEntity, {
+        table_alias: 'user',
+        preload: ['profiles', 'address'],
+      })
+        .where('user.id = :id', { id: saved.user_id })
+        .getOneOrFail();
+
+      await this.cache.Set<UserEntity>(
+        'user',
         this.AppId,
-        saved.id.toString(),
-        saved,
+        user.id.toString(),
+        user,
       );
 
       return saved;
