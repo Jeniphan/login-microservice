@@ -41,7 +41,7 @@ export class ProfilesService extends BaseService {
       parent_table: 'user',
       table_alias: 'profiles',
     })
-      .where('id = :id', { id: payload.id })
+      .where('user.id = :id', { id: payload.id })
       .getOneOrFail();
 
     const ProfileRepo = this.getRepository(ProfileEntity);
