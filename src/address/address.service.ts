@@ -92,7 +92,7 @@ export class AddressService extends BaseService {
     const profiles = await this.AdvanceFilter(query, AddressEntity, {
       app_id: true,
       table_alias: 'address',
-      parent_table: 'user',
+      parent_table: 'users',
       preload: ['user'],
     });
 

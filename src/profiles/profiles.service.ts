@@ -38,7 +38,7 @@ export class ProfilesService extends BaseService {
   async UpdateProfile(payload: IUpdateProfilePayload): Promise<ProfileEntity> {
     const profile = await this.CustomQueryParentWithAppId(ProfileEntity, {
       app_id: true,
-      parent_table: 'user',
+      parent_table: 'users',
       table_alias: 'profiles',
     })
       .where('id = :id', { id: payload.id })
