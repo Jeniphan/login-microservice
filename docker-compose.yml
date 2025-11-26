@@ -1,0 +1,13 @@
+version: "3.8"
+services:
+  app:
+    build: .
+    image: login-ms:latest
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+    restart: unless-stopped
